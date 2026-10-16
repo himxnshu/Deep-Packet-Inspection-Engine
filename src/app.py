@@ -930,3 +930,16 @@ if results:
                     mime="application/vnd.tcpdump.pcap",
                     use_container_width=True,
                 )
+
+
+# ============================================================================
+# VERCEL COMPATIBILITY EXPORTS (Fallback WSGI / ASGI handler)
+# ============================================================================
+def app(environ, start_response):
+    status = "200 OK"
+    headers = [("Content-Type", "text/html; charset=utf-8")]
+    start_response(status, headers)
+    return [b"<h1>Kraken DPI Engine</h1><p>Interactive dashboard requires persistent WebSockets. Please run: streamlit run src/app.py</p>"]
+
+application = app
+handler = app

@@ -1,10 +1,8 @@
 # Vercel Ignore File
-# Prevents Vercel from treating the Python backend and Streamlit dashboard as serverless functions.
-src/
-requirements.txt
-generate_test_pcap.py
-*.pcap
-.venv/
-venv/
 __pycache__/
 *.pyc
+.venv/
+venv/
+*.pcap
+output.pcap
+test_dpi.pcap
