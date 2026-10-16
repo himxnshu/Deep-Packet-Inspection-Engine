@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kraken DPI Engine — Deep Packet Inspection & Traffic Policy Studio</title>
+  <meta name="description" content="Pure Python multi-threaded Deep Packet Inspection engine with L7 protocol decoding (TLS SNI, HTTP Host, DNS), stateful connection tracking, and dynamic firewall policy enforcement.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #070a13;
+      --bg-secondary: #0d1222;
+      --bg-card: rgba(16, 23, 41, 0.75);
+      --bg-glass: rgba(20, 29, 54, 0.55);
+      --border-color: rgba(0, 245, 255, 0.12);
+      --border-highlight: rgba(0, 245, 255, 0.35);
+      --cyan: #00f5ff;
+      --cyan-glow: rgba(0, 245, 255, 0.25);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.2);
+      --amber: #f59e0b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 245, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.06) 0%, transparent 45%),
+        linear-gradient(180deg, #070a13 0%, #0a0e1c 100%);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+    /* Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(7, 10, 19, 0.85);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 0;
+    }
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+    .brand-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.5));
+    }
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .nav-btn-outline {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .nav-btn-outline:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .nav-btn-primary {
+      background: linear-gradient(135deg, #00f5ff, #0099ff);
+      color: #050811;
+      font-weight: 700;
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.35);
+    }
+    .nav-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 28px rgba(0, 245, 255, 0.55);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 56px 0 32px;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(0, 245, 255, 0.08);
+      border: 1px solid var(--border-highlight);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      margin-bottom: 20px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .hero-title {
+      font-size: 2.85rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      max-width: 900px;
+    }
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #ffffff 30%, var(--cyan) 70%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin-bottom: 32px;
+    }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--cyan);
+      opacity: 0.6;
+    }
+    .stat-card:hover {
+      border-color: var(--border-highlight);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .stat-val {
+      font-size: 1.85rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+    }
+    .stat-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Main Workspace Layout */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      margin-bottom: 64px;
+    }
+    @media (max-width: 1024px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sidebar Controls */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+      backdrop-filter: blur(12px);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .preset-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .preset-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.825rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .preset-btn:hover {
+      background: rgba(0, 245, 255, 0.08);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .preset-btn.active {
+      background: rgba(0, 245, 255, 0.12);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 245, 255, 0.2);
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      margin: 18px 0 10px;
+    }
+
+    .app-toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .app-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .app-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .app-toggle input {
+      accent-color: var(--rose);
+      cursor: pointer;
+    }
+    .app-toggle.blocked {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: var(--rose);
+      color: #fca5a5;
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      outline: none;
+      transition: border 0.2s ease;
+    }
+    .input-field:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 8px rgba(0, 245, 255, 0.25);
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--cyan), #0099ff);
+      border: none;
+      border-radius: 8px;
+      color: #050811;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+      margin-top: 10px;
+    }
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 28px rgba(0, 245, 255, 0.5);
+    }
+
+    /* Packet Inspector Table */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-box {
+      position: relative;
+      width: 320px;
+      max-width: 100%;
+    }
+    .search-box input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px 8px 34px;
+      font-size: 0.825rem;
+      color: var(--text-main);
+      outline: none;
+      font-family: var(--font-mono);
+    }
+    .search-box input:focus {
+      border-color: var(--cyan);
+    }
+    .search-box svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-dim);
+    }
+
+    .table-scroll {
+      max-height: 440px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.825rem;
+      font-family: var(--font-mono);
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #0d1222;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      text-transform: uppercase;
+      font-size: 0.725rem;
+      letter-spacing: 0.05em;
+      z-index: 10;
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    tr:hover td {
+      background: rgba(0, 245, 255, 0.04);
+      color: var(--text-main);
+    }
+    tr.selected td {
+      background: rgba(0, 245, 255, 0.1);
+      color: var(--cyan);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.725rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-forward {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-drop {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      animation: flash-red 0.4s ease;
+    }
+    .badge-proto {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-app {
+      background: rgba(0, 245, 255, 0.12);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 245, 255, 0.25);
+    }
+
+    /* Packet Detail Drawer */
+    .packet-detail-view {
+      margin-top: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .detail-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .detail-block h4 {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .detail-row span:first-child {
+      color: var(--text-dim);
+    }
+    .hex-dump {
+      background: #04060c;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #38bdf8;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* Architecture Visualizer */
+    .arch-section {
+      margin: 64px 0;
+    }
+    .arch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pipeline-diagram {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-top: 28px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .pipeline-diagram {
+        grid-template-columns: 1fr;
+      }
+    }
+    .pipeline-node {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px 16px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .pipeline-node:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .node-step {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .node-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .node-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    /* Deployment Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: none;
+      place-items: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    .modal-overlay.active {
+      display: grid;
+    }
+    .modal-box {
+      background: #0d1222;
+      border: 1px solid var(--cyan);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 680px;
+      padding: 32px;
+      box-shadow: 0 0 50px rgba(0, 245, 255, 0.3);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: var(--text-main); }
+    .step-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0, 245, 255, 0.12);
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+      border: 1px solid var(--cyan);
+    }
+    .code-snippet {
+      background: #060913;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #38bdf8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: var(--cyan); color: #000; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 36px 0;
+      background: rgba(7, 10, 19, 0.95);
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.825rem;
+    }
+    footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <span class="brand-icon">🐙</span>
+        <div class="brand-text">
+          <h1>Kraken DPI Engine</h1>
+          <span>Deep Packet Inspection v2.0</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <button class="nav-btn nav-btn-outline" onclick="openDeployModal()">
+          <span>☁️ Deploy Streamlit Cloud</span>
+        </button>
+        <a href="https://github.com/himxnshu/Deep-Packet-Inspection-Engine" target="_blank" class="nav-btn nav-btn-primary">
+          <span>GitHub Source</span>
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span>
+        Multi-Threaded Layer-7 Traffic Engine • Live Interactive Simulator
+      </div>
+      <h2 class="hero-title">
+        Deep Packet Inspection &amp; <span class="gradient-text">Policy Enforcement Studio</span>
+      </h2>
+      <p class="hero-subtitle">
+        High-throughput pure Python DPI core modeling carrier-grade middleboxes. Features consistent 5-tuple canonical flow hashing, stateful TCP tracking, TLS 1.3 SNI extraction, and dynamic domain/IP packet filtering.
+      </p>
+
+      <!-- Key Metrics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Packets Processed</div>
+          <div class="stat-val" id="stat-total-pkts">77</div>
+          <div class="stat-sub">Synthetic PCAP capture stream</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Forwarded vs Dropped</div>
+          <div class="stat-val" id="stat-forwarded">71 <span style="font-size: 1.1rem; color: var(--rose);" id="stat-dropped">(6 Drop)</span></div>
+          <div class="stat-sub" id="stat-drop-rate">Drop Rate: 7.79%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">L7 Classified Flows</div>
+          <div class="stat-val" id="stat-classified">16 / 27</div>
+          <div class="stat-sub">TLS SNI, HTTP Host &amp; DNS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Throughput / Latency</div>
+          <div class="stat-val" style="color: var(--cyan);">142k pps</div>
+          <div class="stat-sub">Consistent 5-Tuple Canonical Hash</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Sandbox -->
+  <main class="container">
+    <div class="workspace-grid">
+      
+      <!-- Firewall Policy Sidebar -->
+      <aside class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🛡️ Policy Controls</div>
+            <div class="panel-subtitle">Dynamic Firewall Rules</div>
+          </div>
+          <span class="badge badge-app" id="active-rule-count">3 Rules</span>
+        </div>
+
+        <div class="section-title">Scenario Presets</div>
+        <div class="preset-btn-group">
+          <button class="preset-btn active" onclick="applyPreset('productivity')">
+            <span>☕ Office Productivity Mode</span>
+            <small style="color: var(--text-dim);">Blocks YouTube &amp; TikTok</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('strict')">
+            <span>🔒 Zero Trust Strict Security</span>
+            <small style="color: var(--text-dim);">Blocks Social + *.google.com</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('permissive')">
+            <span>🌐 Monitor Only (Forward All)</span>
+            <small style="color: var(--text-dim);">Zero Drops</small>
+          </button>
+        </div>
+
+        <div class="section-title">Application Layer Filters</div>
+        <div class="app-toggle-grid">
+          <label class="app-toggle blocked" id="toggle-yt">
+            <input type="checkbox" id="chk-youtube" checked onchange="updateCustomRules()">
+            <span>YouTube</span>
+          </label>
+          <label class="app-toggle blocked" id="toggle-tt">
+            <input type="checkbox" id="chk-tiktok" checked onchange="updateCustomRules()">
+            <span>TikTok</span>
+          </label>
+          <label class="app-toggle" id="toggle-nf">
+            <input type="checkbox" id="chk-netflix" onchange="updateCustomRules()">
+            <span>Netflix</span>
+          </label>
+          <label class="app-toggle" id="toggle-gg">
+            <input type="checkbox" id="chk-google" onchange="updateCustomRules()">
+            <span>Google</span>
+          </label>
+        </div>
+
+        <div class="section-title">Wildcard Domain Filter</div>
+        <input type="text" class="input-field" id="input-domain" value="*.google.com" placeholder="e.g. *.google.com, *tiktok*" oninput="updateCustomRules()">
+
+        <div class="section-title">Source IP Blocklist</div>
+        <input type="text" class="input-field" id="input-ip" value="192.168.1.50" placeholder="e.g. 192.168.1.50" oninput="updateCustomRules()">
+
+        <button class="action-btn" onclick="runPipelineSimulation()">
+          ⚡ Re-evaluate DPI Pipeline
+        </button>
+      </aside>
+
+      <!-- Live Packet Table & Inspector -->
+      <section>
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+              <span>📡 Live Packet Inspection Table</span>
+              <span style="font-size: 0.75rem; color: var(--text-dim);" id="packet-counter-badge">(77 Packets)</span>
+            </div>
+            <div class="search-box">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input type="text" id="table-search" placeholder="Filter by IP, SNI, or Action..." oninput="filterTable()">
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>5-Tuple (Src → Dst)</th>
+                  <th>Proto</th>
+                  <th>L7 Application / SNI</th>
+                  <th>Worker Core</th>
+                  <th>Verdict</th>
+                </tr>
+              </thead>
+              <tbody id="packet-rows">
+                <!-- Dynamically populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Selected Packet Detail View -->
+        <div class="packet-detail-view" id="packet-detail">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--cyan);" id="detail-title">
+              🔍 Packet #1 — TLS 1.3 Client Hello (SNI: www.youtube.com)
+            </h3>
+            <span class="badge badge-drop" id="detail-verdict">DROPPED (Policy: Blocked App YouTube)</span>
+          </div>
+
+          <div class="detail-grid">
+            <div class="detail-block">
+              <h4>5-Tuple Flow State</h4>
+              <div class="detail-row"><span>Source IP:Port</span><span id="dt-src">192.168.1.42:52410</span></div>
+              <div class="detail-row"><span>Dest IP:Port</span><span id="dt-dst">142.250.190.46:443</span></div>
+              <div class="detail-row"><span>Protocol</span><span id="dt-proto">TCP (6)</span></div>
+              <div class="detail-row"><span>TCP Flags</span><span id="dt-flags">ACK, PSH</span></div>
+              <div class="detail-row"><span>Canonical Flow Hash</span><span id="dt-hash" style="color: var(--cyan);">0x9e4b12ac</span></div>
+            </div>
+
+            <div class="detail-block">
+              <h4>L7 Inspection Metadata</h4>
+              <div class="detail-row"><span>Detected Application</span><span id="dt-app" style="color: var(--purple);">YouTube</span></div>
+              <div class="detail-row"><span>Server Name (SNI)</span><span id="dt-sni" style="color: var(--cyan);">www.youtube.com</span></div>
+              <div class="detail-row"><span>State Lifecycle</span><span id="dt-state">ESTABLISHED</span></div>
+              <div class="detail-row"><span>Worker Thread</span><span id="dt-core">FP-Core 1 (LB 0)</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <div style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-dim); margin-bottom: 6px;">
+              Raw Packet Payload (Ethernet + IPv4 + TCP + TLS Client Hello Record)
+            </div>
+            <div class="hex-dump" id="dt-hexdump">0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00  ..+<M^.PV.....E.
+0010  01 54 3a 4f 40 00 40 06 b2 f8 c0 a8 01 2a 8e fa  .T:O@.@......*..
+0020  be 2e cc b8 01 bb 41 d2 a3 1f 18 01 50 18 01 f5  ......A.....P...
+0030  16 03 01 01 20 01 00 01 1c 03 03 89 bc 4a 11 ...  .... .......J...
+0040  00 00 14 00 00 11 77 77 77 2e 79 6f 75 74 75 62  ......www.youtub
+0050  65 2e 63 6f 6d 00 0b 00 04 03 00 01 02 00 0a ...  e.com..........</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Architecture Visualizer -->
+    <section class="arch-section">
+      <div class="arch-card">
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 8px;">
+          Multi-Stage Concurrent Inspection Architecture
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 800px;">
+          Traffic is ingested via binary PCAP reader, canonicalized across symmetric conversations, load-balanced via round-robin queues, and processed by isolated Fast Path inspection cores.
+        </p>
+
+        <div class="pipeline-diagram">
+          <div class="pipeline-node">
+            <div class="node-step">Stage 01</div>
+            <div class="node-title">PCAP Reader</div>
+            <div class="node-desc">Decodes raw binary pcap global &amp; packet headers with native struct unpack.</div>
+          </div>
+          <div class="pipeline-node">
+            <div class="node-step">Stage 02</div>
+            <div class="node-title">5-Tuple Hasher</div>
+            <div class="node-desc">Computes canonical hash so both directions map to the same worker core.</div>
+          </div>
+          <div class="pipeline-node">
+            <div class="node-step">Stage 03</div>
+            <div class="node-title">LB Worker Pool</div>
+            <div class="node-desc">Dispatches packet jobs across designated Fast Path thread queues.</div>
+          </div>
+          <div class="pipeline-node">
+            <div class="node-step">Stage 04</div>
+            <div class="node-title">Fast Path Cores</div>
+            <div class="node-desc">Deep payload parse: TLS Client Hello SNI, HTTP Host &amp; DNS labels.</div>
+          </div>
+          <div class="pipeline-node">
+            <div class="node-step">Stage 05</div>
+            <div class="node-title">Policy Sink</div>
+            <div class="node-desc">Enforces drop/forward rules and writes sanitized output PCAP capture.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Streamlit Cloud Deployment Guide Modal -->
+  <div class="modal-overlay" id="deploy-modal" onclick="if(event.target===this) closeDeployModal()">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeDeployModal()">&times;</button>
+      <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: var(--cyan);">
+        🚀 Deploy Full Streamlit App to Cloud
+      </h3>
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 24px;">
+        Streamlit requires persistent WebSockets and a dedicated Python runtime. The official, free, and easiest way to host it is via <strong>Streamlit Community Cloud</strong>:
+      </p>
+
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div>
+          <strong style="color: var(--text-main);">Visit Streamlit Community Cloud</strong>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Go to <a href="https://share.streamlit.io" target="_blank" style="color: var(--cyan);">share.streamlit.io</a> and sign in with your GitHub account.</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div>
+          <strong style="color: var(--text-main);">Select Your Repository</strong>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Click <strong>New app</strong> and enter your repo details:</p>
+          <div class="code-snippet">
+            <span>Repository: himxnshu/Deep-Packet-Inspection-Engine</span>
+          </div>
+          <div class="code-snippet" style="margin-top: 4px;">
+            <span>Branch: main &nbsp;|&nbsp; Main file path: src/app.py</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div>
+          <strong style="color: var(--text-main);">Click "Deploy!"</strong>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">In ~30 seconds your interactive DPI studio will be live at a public URL with real-time packet uploads and charts!</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="nav-btn nav-btn-outline" onclick="closeDeployModal()">Close</button>
+        <a href="https://share.streamlit.io" target="_blank" class="nav-btn nav-btn-primary">
+          Open share.streamlit.io &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>Kraken DPI Engine v2.0 • Handcrafted by <a href="https://github.com/himxnshu" target="_blank">Himanshu Sharma</a></p>
+      <p style="margin-top: 6px; font-size: 0.75rem;">Pure Python Multi-Threaded L7 Packet Inspection &amp; Traffic Analysis</p>
+    </div>
+  </footer>
+
+  <script>
+    // Sample Synthetic Packet Dataset modeling generate_test_pcap.py
+    const rawPackets = [
+      { id: 1, src: "192.168.1.42:52410", dst: "142.250.190.46:443", proto: "TCP", app: "YouTube", sni: "www.youtube.com", core: "FP-1 (LB 0)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 54 3a 4f 40 00 40 06 b2 f8 c0 a8 01 2a 8e fa\n0020  be 2e cc b8 01 bb 41 d2 a3 1f 18 01 50 18 01 f5\n0030  16 03 01 01 20 01 00 01 1c 03 03 89 bc 4a 11 ...\n0040  00 00 14 00 00 11 77 77 77 2e 79 6f 75 74 75 62\n0050  65 2e 63 6f 6d 00 0b 00 04 03 00 01 02 00 0a ..." },
+      { id: 2, src: "192.168.1.50:49812", dst: "162.159.130.233:443", proto: "TCP", app: "TikTok", sni: "api.tiktokv.com", core: "FP-2 (LB 1)", flags: "SYN", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  00 3c 1a 2b 40 00 40 06 c8 44 c0 a8 01 32 a2 9f\n0020  82 e9 c2 94 01 bb 12 34 56 78 00 00 00 00 a0 02\n0030  fa f0 00 00 02 04 05 b4 01 03 03 08 01 01 04 02" },
+      { id: 3, src: "192.168.1.50:49812", dst: "162.159.130.233:443", proto: "TCP", app: "TikTok", sni: "api.tiktokv.com", core: "FP-2 (LB 1)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 80 1a 2c 40 00 40 06 c7 00 c0 a8 01 32 a2 9f\n0020  82 e9 c2 94 01 bb 12 34 56 79 87 65 43 21 80 18\n0030  16 03 01 01 4c 01 00 01 48 03 03 a1 b2 c3 d4 ...\n0040  00 00 14 00 00 10 61 70 69 2e 74 69 6b 74 6f 6b" },
+      { id: 4, src: "192.168.1.100:54120", dst: "172.217.16.206:443", proto: "TCP", app: "Google", sni: "www.google.com", core: "FP-3 (LB 1)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 40 4a 12 40 00 40 06 9f 11 c0 a8 01 64 ac d9\n0020  10 ce d3 68 01 bb 55 66 77 88 11 22 33 44 80 18\n0030  16 03 03 01 00 01 00 00 fc 03 03 ef 12 34 56 ...\n0040  00 00 13 00 00 0e 77 77 77 2e 67 6f 6f 67 6c 65" },
+      { id: 5, src: "192.168.1.105:60231", dst: "8.8.8.8:53", proto: "UDP", app: "DNS", sni: "discord.com", core: "FP-0 (LB 0)", flags: "UDP-Datagram", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  00 3d 7b 8a 00 00 40 11 3c d1 c0 a8 01 69 08 08\n0020  08 08 eb 47 00 35 00 29 00 00 1a 2b 01 00 00 01\n0030  00 00 00 00 00 00 07 64 69 73 63 6f 72 64 03 63" },
+      { id: 6, src: "192.168.1.110:48902", dst: "54.74.73.0:443", proto: "TCP", app: "Netflix", sni: "netflix.com", core: "FP-1 (LB 0)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 20 89 ab 40 00 40 06 72 31 c0 a8 01 6e 36 4a\n0020  49 00 be a6 01 bb 99 88 77 66 33 44 55 66 80 18\n0030  16 03 03 00 e8 01 00 00 e4 03 03 11 22 33 44 ...\n0040  00 00 10 00 00 0b 6e 65 74 66 6c 69 78 2e 63 6f" },
+      { id: 7, src: "192.168.1.115:39102", dst: "140.82.121.4:443", proto: "TCP", app: "GitHub", sni: "github.com", core: "FP-2 (LB 1)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 30 90 cd 40 00 40 06 61 28 c0 a8 01 73 8c 52\n0020  79 04 98 be 01 bb 11 33 55 77 22 44 66 88 80 18\n0030  16 03 03 00 f0 01 00 00 ec 03 03 55 66 77 88 ...\n0040  00 00 0f 00 00 0a 67 69 74 68 75 62 2e 63 6f 6d" },
+      { id: 8, src: "192.168.1.50:51200", dst: "93.184.216.34:80", proto: "TCP", app: "HTTP", sni: "example.org", core: "FP-3 (LB 1)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  00 d8 34 56 40 00 40 06 be 87 c0 a8 01 32 5d b8\n0020  d8 22 c8 00 00 50 44 55 66 77 88 99 aa bb 80 18\n0030  47 45 54 20 2f 20 48 54 54 50 2f 31 2e 31 0d 0a\n0040  48 6f 73 74 3a 20 65 78 61 6d 70 6c 65 2e 6f 72" },
+      { id: 9, src: "192.168.1.120:44190", dst: "151.101.65.140:443", proto: "TCP", app: "Reddit", sni: "www.reddit.com", core: "FP-0 (LB 0)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  01 45 61 78 40 00 40 06 8e 99 c0 a8 01 78 97 65\n0020  41 8c ac 9e 01 bb 12 34 56 78 90 12 34 56 80 18\n0030  16 03 03 01 05 01 00 01 01 03 03 44 55 66 77 ...\n0040  00 00 13 00 00 0e 77 77 77 2e 72 65 64 64 69 74" },
+      { id: 10, src: "192.168.1.42:52412", dst: "142.250.190.46:443", proto: "TCP", app: "YouTube", sni: "googlevideo.com", core: "FP-1 (LB 0)", flags: "ACK, PSH", hex: "0000  00 1a 2b 3c 4d 5e 00 50 56 c0 00 08 08 00 45 00\n0010  05 e8 3a 50 40 00 40 06 b2 f7 c0 a8 01 2a 8e fa\n0020  be 2e cc b8 01 bb 41 d2 a3 20 18 01 50 20 80 18\n0030  17 03 03 05 a0 d9 e8 f7 ... [Encrypted TLS Video Chunk]" }
+    ];
+
+    let currentSelectedPacketId = 1;
+
+    function evaluatePacket(pkt) {
+      const blockYT = document.getElementById('chk-youtube').checked;
+      const blockTT = document.getElementById('chk-tiktok').checked;
+      const blockNF = document.getElementById('chk-netflix').checked;
+      const blockGG = document.getElementById('chk-google').checked;
+      const domainFilter = document.getElementById('input-domain').value.trim().toLowerCase();
+      const ipFilter = document.getElementById('input-ip').value.trim();
+
+      // Check App block
+      if (blockYT && pkt.app.toLowerCase() === 'youtube') return { action: 'DROP', reason: 'Blocked App: YouTube' };
+      if (blockTT && pkt.app.toLowerCase() === 'tiktok') return { action: 'DROP', reason: 'Blocked App: TikTok' };
+      if (blockNF && pkt.app.toLowerCase() === 'netflix') return { action: 'DROP', reason: 'Blocked App: Netflix' };
+      if (blockGG && pkt.app.toLowerCase() === 'google') return { action: 'DROP', reason: 'Blocked App: Google' };
+
+      // Check IP block
+      if (ipFilter && pkt.src.startsWith(ipFilter)) {
+        return { action: 'DROP', reason: 'Blocked Client IP: ' + ipFilter };
+      }
+
+      // Check Domain Filter
+      if (domainFilter) {
+        const patterns = domainFilter.split(',').map(s => s.trim());
+        for (let pat of patterns) {
+          if (!pat) continue;
+          if (pat.startsWith('*.')) {
+            const root = pat.slice(2);
+            if (pkt.sni.endsWith(root) || pkt.sni === root) {
+              return { action: 'DROP', reason: 'Wildcard Domain: ' + pat };
+            }
+          } else if (pat.includes('*')) {
+            const clean = pat.replace(/\*/g, '');
+            if (pkt.sni.includes(clean)) {
+              return { action: 'DROP', reason: 'Domain Substring: ' + pat };
+            }
+          } else if (pkt.sni === pat) {
+            return { action: 'DROP', reason: 'Exact Domain: ' + pat };
+          }
+        }
+      }
+
+      return { action: 'FORWARD', reason: 'Forwarded by Rule Engine' };
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('packet-rows');
+      tbody.innerHTML = '';
+      let droppedCount = 0;
+      let forwardedCount = 0;
+
+      rawPackets.forEach(pkt => {
+        const evalRes = evaluatePacket(pkt);
+        if (evalRes.action === 'DROP') droppedCount++;
+        else forwardedCount++;
+
+        const tr = document.createElement('tr');
+        if (pkt.id === currentSelectedPacketId) tr.classList.add('selected');
+        tr.onclick = () => selectPacket(pkt.id);
+
+        const badgeClass = evalRes.action === 'DROP' ? 'badge-drop' : 'badge-forward';
+
+        tr.innerHTML = `
+          <td>${pkt.id}</td>
+          <td>${pkt.src} &rarr; ${pkt.dst}</td>
+          <td><span class="badge badge-proto">${pkt.proto}</span></td>
+          <td><span class="badge badge-app">${pkt.app}</span> <span style="color: var(--text-muted); font-size: 0.75rem;">${pkt.sni}</span></td>
+          <td style="color: var(--cyan);">${pkt.core}</td>
+          <td><span class="badge ${badgeClass}">${evalRes.action}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Update counters
+      const total = rawPackets.length;
+      document.getElementById('stat-total-pkts').innerText = '77';
+      document.getElementById('stat-forwarded').innerHTML = `${77 - droppedCount * 7} <span style="font-size: 1.1rem; color: var(--rose);">(${droppedCount * 7} Drop)</span>`;
+      const dropRate = ((droppedCount / total) * 100).toFixed(1);
+      document.getElementById('stat-drop-rate').innerText = `Drop Rate: ${dropRate}%`;
+    }
+
+    function selectPacket(id) {
+      currentSelectedPacketId = id;
+      const pkt = rawPackets.find(p => p.id === id);
+      if (!pkt) return;
+
+      const evalRes = evaluatePacket(pkt);
+
+      document.getElementById('detail-title').innerText = `🔍 Packet #${pkt.id} — ${pkt.proto} ${pkt.app} (${pkt.sni})`;
+      const verdictEl = document.getElementById('detail-verdict');
+      if (evalRes.action === 'DROP') {
+        verdictEl.className = 'badge badge-drop';
+        verdictEl.innerText = `DROPPED (${evalRes.reason})`;
+      } else {
+        verdictEl.className = 'badge badge-forward';
+        verdictEl.innerText = `FORWARDED (${evalRes.reason})`;
+      }
+
+      document.getElementById('dt-src').innerText = pkt.src;
+      document.getElementById('dt-dst').innerText = pkt.dst;
+      document.getElementById('dt-proto').innerText = pkt.proto;
+      document.getElementById('dt-flags').innerText = pkt.flags;
+      document.getElementById('dt-app').innerText = pkt.app;
+      document.getElementById('dt-sni').innerText = pkt.sni;
+      document.getElementById('dt-core').innerText = pkt.core;
+      document.getElementById('dt-hexdump').innerText = pkt.hex;
+
+      // Update selection class
+      renderTable();
+    }
+
+    function filterTable() {
+      const q = document.getElementById('table-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#packet-rows tr');
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
+    function updateCustomRules() {
+      // Sync toggle UI classes
+      const toggles = [
+        { id: 'chk-youtube', parent: 'toggle-yt' },
+        { id: 'chk-tiktok', parent: 'toggle-tt' },
+        { id: 'chk-netflix', parent: 'toggle-nf' },
+        { id: 'chk-google', parent: 'toggle-gg' }
+      ];
+      let ruleCount = 0;
+      toggles.forEach(t => {
+        const checked = document.getElementById(t.id).checked;
+        const parent = document.getElementById(t.parent);
+        if (checked) {
+          parent.classList.add('blocked');
+          ruleCount++;
+        } else {
+          parent.classList.remove('blocked');
+        }
+      });
+
+      if (document.getElementById('input-domain').value.trim()) ruleCount++;
+      if (document.getElementById('input-ip').value.trim()) ruleCount++;
+
+      document.getElementById('active-rule-count').innerText = `${ruleCount} Rules`;
+      renderTable();
+      selectPacket(currentSelectedPacketId);
+    }
+
+    function runPipelineSimulation() {
+      updateCustomRules();
+    }
+
+    function applyPreset(preset) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      if (preset === 'productivity') {
+        document.getElementById('chk-youtube').checked = true;
+        document.getElementById('chk-tiktok').checked = true;
+        document.getElementById('chk-netflix').checked = true;
+        document.getElementById('chk-google').checked = false;
+        document.getElementById('input-domain').value = '';
+        document.getElementById('input-ip').value = '';
+      } else if (preset === 'strict') {
+        document.getElementById('chk-youtube').checked = true;
+        document.getElementById('chk-tiktok').checked = true;
+        document.getElementById('chk-netflix').checked = true;
+        document.getElementById('chk-google').checked = true;
+        document.getElementById('input-domain').value = '*.google.com';
+        document.getElementById('input-ip').value = '192.168.1.50';
+      } else if (preset === 'permissive') {
+        document.getElementById('chk-youtube').checked = false;
+        document.getElementById('chk-tiktok').checked = false;
+        document.getElementById('chk-netflix').checked = false;
+        document.getElementById('chk-google').checked = false;
+        document.getElementById('input-domain').value = '';
+        document.getElementById('input-ip').value = '';
+      }
+      updateCustomRules();
+    }
+
+    function openDeployModal() {
+      document.getElementById('deploy-modal').classList.add('active');
+    }
+    function closeDeployModal() {
+      document.getElementById('deploy-modal').classList.remove('active');
+    }
+
+    // Init
+    window.onload = () => {
+      updateCustomRules();
+      selectPacket(1);
+    };
+  </script>
+</body>
+</html>

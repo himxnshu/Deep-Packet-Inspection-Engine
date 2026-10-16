@@ -82,14 +82,28 @@ The system uses a multi-stage producer-consumer pipeline designed to model hardw
 
 ---
 
-## Installation & Getting Started
+## Cloud Deployment Guide
 
-### Prerequisites
-- **Python 3.10+** (Windows, macOS, or Linux)
-- Install requirements:
-  ```bash
-  pip install -r requirements.txt
-  ```
+### Option A: Streamlit Community Cloud (Recommended for Live App)
+
+The full interactive DPI studio requires persistent WebSockets and Python concurrency. The official, free, zero-config platform to host it is **Streamlit Community Cloud**:
+
+1. Go to **[share.streamlit.io](https://share.streamlit.io)** and log in with your GitHub account.
+2. Click **"New app"** and fill in:
+   - **Repository**: `himxnshu/Deep-Packet-Inspection-Engine`
+   - **Branch**: `main`
+   - **Main file path**: `src/app.py`
+3. Click **"Deploy!"** — Your live interactive dashboard will be online in under a minute!
+
+---
+
+### Option B: Vercel (Interactive Web Showcase & Simulator)
+
+Vercel is a serverless platform designed for static sites and serverless APIs. This repository includes a pre-configured Vercel static deployment (`vercel.json`, `.vercelignore`, and `public/index.html`):
+
+1. Import this repository into **[Vercel](https://vercel.com/)**.
+2. Leave all build settings at their defaults.
+3. Vercel automatically deploys the **Interactive DPI Simulator Showcase** with zero configuration and zero build errors!
 
 ---
 
